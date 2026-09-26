@@ -7,7 +7,7 @@ Drive a rally rover with a brass gramophone on the roof through an endless folde
 meadows, cherry groves, ink forests, lakes and paper mountains — all stitched together by painted roads that double
 as sheet music.
 
-**▶ Play:** https://aadil6971.github.io/foldline/
+**▶ Play:** https://aadil6971.github.io/PaperWorld/
 
 ## Features
 
