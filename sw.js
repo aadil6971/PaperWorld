@@ -1,5 +1,5 @@
 // Paper World — offline cache. HTML is network-first (so updates arrive), everything else cache-first.
-const CACHE = "paperworld-v2";
+const CACHE = "paperworld-v3";
 const CORE = ["./", "index.html", "manifest.webmanifest", "icons/icon-192.png", "icons/icon-512.png",
   "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js"];
 self.addEventListener("install", (e) => {

@@ -727,6 +727,7 @@
       .tb.gold{background:var(--gold)}
       .tb.on{transform:translate(1px,1px);box-shadow:0 0 0 var(--ink);filter:brightness(.92)}
       .tb span{font-size:22px;letter-spacing:0}
+      #tq{position:absolute;left:calc(14px + env(safe-area-inset-left));top:112px;width:58px;height:58px;font-size:8px;pointer-events:auto}
       #rotate{display:none;position:fixed;inset:0;z-index:9;background:var(--paper);align-items:center;justify-content:center;flex-direction:column;gap:10px;
         font:700 12px 'DM Sans';letter-spacing:.2em;text-transform:uppercase;text-align:center;padding:30px}
       #rotate b{font-family:'Caveat Brush',cursive;font-size:44px;letter-spacing:0;text-transform:none;font-weight:400}
@@ -790,6 +791,7 @@
       <div id="nav">
         <button class="btn pe" id="restartBtn">Respawn ↺</button>
         <button class="btn pe" id="helpBtn">Controls ?</button>
+        <button class="btn pe qbtn">Quality ⚙</button>
         <button class="btn pe" id="muteBtn">Sound ♪</button>
       </div>
 
@@ -943,6 +945,7 @@
       <div id="toast" class="card"></div>
       <div id="touch">
         <div id="stick"><div id="knob"></div></div>
+        <button id="tq" class="tb qbtn">⚙<br>QUALITY</button>
         <div id="tbtns">
           <button class="tb" data-act="c"><span>🎥</span></button>
           <button class="tb" data-act="f"><span>✈</span></button>
@@ -993,18 +996,30 @@
       const QS = location.search;
       const IS_TOUCH = /[?&]touch/.test(QS) || (matchMedia("(pointer: coarse)").matches && !/[?&]desktop/.test(QS));
       const MOBILE = /[?&]mobile/.test(QS) || (IS_TOUCH && Math.min(screen.width, screen.height) < 820 && !/[?&]desktop/.test(QS));
-      const FOG_N = MOBILE ? 280 : 450, FOG_F = MOBILE ? 900 : 1500;
+      // quality tiers: 0 low · 1 medium · 2 high · 3 ultra (desktop). Phones default to medium; choice is remembered.
+      const QP = [
+        { name: "LOW", pr: 1.1, msaa: 0, view: 2, fogN: 300, fogF: 950, shadow: 1024, soft: false, traffic: 0.22, people: 90, animals: 0.45, flowers: 0.5, flies: 60, ff: 100, tufts: 16, balloons: 10, near: 440, mid: 680 },
+        { name: "MEDIUM", pr: 1.6, msaa: 4, view: 2, fogN: 380, fogF: 1200, shadow: 2048, soft: false, traffic: 0.45, people: 170, animals: 0.7, flowers: 0.75, flies: 110, ff: 180, tufts: 22, balloons: 16, near: 580, mid: 880 },
+        { name: "HIGH", pr: 2, msaa: 4, view: 3, fogN: 450, fogF: 1500, shadow: 2048, soft: true, traffic: 0.7, people: 250, animals: 0.9, flowers: 0.9, flies: 150, ff: 220, tufts: 26, balloons: 22, near: 680, mid: 1000 },
+        { name: "ULTRA", pr: 1.75, msaa: 4, view: 3, fogN: 450, fogF: 1500, shadow: 2048, soft: true, traffic: 1, people: 320, animals: 1, flowers: 1, flies: 170, ff: 260, tufts: 30, balloons: 26, near: 750, mid: 1100 },
+      ];
+      let QI = MOBILE ? 1 : 3;
+      try { const sv = localStorage.getItem("pw-quality"); if (sv !== null && QP[+sv]) QI = +sv; } catch (_) {}
+      const qm = QS.match(/[?&]q=(\d)/); if (qm && QP[+qm[1]]) QI = +qm[1];
+      const Q_ = QP[QI];
+      const FOG_N = Q_.fogN, FOG_F = Q_.fogF;
       const canvas = $("c");
       const renderer = new THREE.WebGLRenderer({
         canvas,
         antialias: false,
         powerPreference: "high-performance",
       });
-      let PR = Math.min(devicePixelRatio, MOBILE ? 1 : 1.75);
+      const PR_MAX = Math.min(devicePixelRatio, Q_.pr);
+      let PR = PR_MAX;
       renderer.setPixelRatio(PR);
       renderer.setSize(innerWidth, innerHeight, false);
       renderer.shadowMap.enabled = true;
-      renderer.shadowMap.type = MOBILE ? THREE.PCFShadowMap : THREE.PCFSoftShadowMap;
+      renderer.shadowMap.type = Q_.soft ? THREE.PCFSoftShadowMap : THREE.PCFShadowMap;
       const scene = new THREE.Scene();
       const camera = new THREE.PerspectiveCamera(
         62,
@@ -1108,7 +1123,7 @@
       const CH = 384,
         CELLS = 80,
         CS = CH / CELLS,
-        VIEW_R = MOBILE ? 2 : 3,
+        VIEW_R = Q_.view,
         HALF = 11,
         SH = 3.4,
         WATER_Y = -3,
@@ -4445,7 +4460,7 @@ float fbm(vec2 p){float v=0.,a=.5;for(int i=0;i<5;i++){v+=a*noise(p);p=p*2.03+ve
       }
       function meadow(x, h, z, r) {
         const drift = pick(FLOWER_COLS);
-        for (let k = 0, n = Math.round((9 + Math.floor(r * 10)) * (MOBILE ? 0.45 : 1)); k < n; k++) {
+        for (let k = 0, n = Math.round((9 + Math.floor(r * 10)) * Q_.flowers); k < n; k++) {
           const fx = x + RR(-4.5, 4.5),
             fz = z + RR(-4.5, 4.5);
           if (roadNear(fx, fz).d < HALF + SH + 1) continue;
@@ -6024,7 +6039,7 @@ float fbm(vec2 p){float v=0.,a=.5;for(int i=0;i<5;i++){v+=a*noise(p);p=p*2.03+ve
    ========================================================= */
       const sun = new THREE.DirectionalLight(0xffffff, 2.6);
       sun.castShadow = true;
-      sun.shadow.mapSize.set(MOBILE ? 1024 : 2048, MOBILE ? 1024 : 2048);
+      sun.shadow.mapSize.set(Q_.shadow, Q_.shadow);
       Object.assign(sun.shadow.camera, {
         left: -55,
         right: 55,
@@ -7163,7 +7178,7 @@ float fbm(vec2 p){float v=0.,a=.5;for(int i=0;i<5;i++){v+=a*noise(p);p=p*2.03+ve
         const dt = new THREE.DepthTexture(w, h, THREE.UnsignedInt248Type);
         dt.format = THREE.DepthStencilFormat;
         rt = new THREE.WebGLRenderTarget(w, h, {
-          samples: MOBILE ? 0 : 4,
+          samples: Q_.msaa,
           type: THREE.HalfFloatType,
           stencilBuffer: true,
           depthTexture: dt,
@@ -7362,6 +7377,16 @@ float fbm(vec2 p){float v=0.,a=.5;for(int i=0;i<5;i++){v+=a*noise(p);p=p*2.03+ve
       });
       canvas.addEventListener("pointerup", () => (game.dragging = false));
       canvas.addEventListener("pointercancel", () => (game.dragging = false));
+      for (const qb of document.querySelectorAll(".qbtn")) {
+        const label = () => (qb.id === "tq" ? `⚙<br>${Q_.name}` : `Quality · ${Q_.name}`);
+        qb.innerHTML = label();
+        qb.addEventListener("click", () => {
+          const max = MOBILE ? 2 : 3, next = (QI + 1) % (max + 1);
+          try { localStorage.setItem("pw-quality", next); } catch (_) {}
+          toast(`Quality · ${QP[next].name} — reloading`);
+          setTimeout(() => location.reload(), 600);
+        });
+      }
 
       /* touch: joystick + action buttons (phones / tablets) */
       if (IS_TOUCH) {
@@ -8137,7 +8162,7 @@ float fbm(vec2 p){float v=0.,a=.5;for(int i=0;i<5;i++){v+=a*noise(p);p=p*2.03+ve
         ["tractor", 40],
         ["sports", 70],
       ];
-      if (MOBILE) for (const v of VCOUNTS) v[1] = Math.max(3, Math.round(v[1] * 0.2));
+      if (Q_.traffic < 1) for (const v of VCOUNTS) v[1] = Math.max(3, Math.round(v[1] * Q_.traffic));
       const VEH_COLS = [
         "#e0418f",
         "#1fb5a8",
@@ -8403,7 +8428,7 @@ float fbm(vec2 p){float v=0.,a=.5;for(int i=0;i<5;i++){v+=a*noise(p);p=p*2.03+ve
           "#b8412c",
           "#d8d2c8",
         ];
-      const people = new Crowd(PSPEC, [["person", MOBILE ? 80 : 320]], true);
+      const people = new Crowd(PSPEC, [["person", Q_.people]], true);
       function placePed(a, near, at) {
         a.col = rpick(SHIRTS);
         a.pants = rpick(PANTS);
@@ -8759,7 +8784,7 @@ float fbm(vec2 p){float v=0.,a=.5;for(int i=0;i<5;i++){v+=a*noise(p);p=p*2.03+ve
         16,
       );
       const balloons = [];
-      for (let k = 0; k < (MOBILE ? 10 : 26); k++) {
+      for (let k = 0; k < Q_.balloons; k++) {
         const g = new THREE.Group(),
           zep = k < 4;
         if (zep) {
@@ -9276,8 +9301,8 @@ float fbm(vec2 p){float v=0.,a=.5;for(int i=0;i<5;i++){v+=a*noise(p);p=p*2.03+ve
                 (c.cx + 0.5) * CH - car.x,
                 (c.cz + 0.5) * CH - car.z,
               ),
-              near = d < (MOBILE ? 420 : 750),
-              mid = d < (MOBILE ? 650 : 1100);
+              near = d < Q_.near,
+              mid = d < Q_.mid;
             if (c.lodN === near && c.lodM === mid) continue;
             c.lodN = near;
             c.lodM = mid;
@@ -9561,7 +9586,7 @@ float fbm(vec2 p){float v=0.,a=.5;for(int i=0;i<5;i++){v+=a*noise(p);p=p*2.03+ve
         ["bear", 10],
         ["swan", 24],
       ];
-      if (MOBILE) for (const v of ACOUNTS) v[1] = Math.max(2, Math.round(v[1] * 0.4));
+      if (Q_.animals < 1) for (const v of ACOUNTS) v[1] = Math.max(2, Math.round(v[1] * Q_.animals));
       const animals = new Crowd(ASPEC, ACOUNTS, true);
       function habitat(x, z) {
         const h = heightAt(x, z);
@@ -9686,7 +9711,7 @@ float fbm(vec2 p){float v=0.,a=.5;for(int i=0;i<5;i++){v+=a*noise(p);p=p*2.03+ve
         s.bezierCurveTo(1.3, -0.3, 0.8, -0.9, 0, -0.2);
         return new THREE.ShapeGeometry(s, 6).rotateX(-Math.PI / 2);
       })();
-      const BN2 = MOBILE ? 60 : 170,
+      const BN2 = Q_.flies,
         wingMat = toon(0xffffff, { side: THREE.DoubleSide }),
         wingR = new THREE.InstancedMesh(wingGeo, wingMat, BN2),
         wingL = new THREE.InstancedMesh(wingGeo, wingMat, BN2);
@@ -9810,7 +9835,7 @@ float fbm(vec2 p){float v=0.,a=.5;for(int i=0;i<5;i++){v+=a*noise(p);p=p*2.03+ve
           );
       };
       const TG = 2.3,
-        TR = MOBILE ? 16 : 30,
+        TR = Q_.tufts,
         TN = (2 * TR + 1) * (2 * TR + 1),
         tufts = new THREE.InstancedMesh(tuftGeo, tuftMat, TN);
       tufts.frustumCulled = false;
@@ -9923,7 +9948,7 @@ float fbm(vec2 p){float v=0.,a=.5;for(int i=0;i<5;i++){v+=a*noise(p);p=p*2.03+ve
         scene.add(g);
         whales.push({ g, tail, need: true, ph: Math.random() * 6, hd: 0 });
       }
-      const FFN = MOBILE ? 100 : 260,
+      const FFN = Q_.ff,
         ffGeo = new THREE.BufferGeometry(),
         ffPos = new Float32Array(FFN * 3),
         ffs = [];
@@ -10788,10 +10813,22 @@ float fbm(vec2 p){float v=0.,a=.5;for(int i=0;i<5;i++){v+=a*noise(p);p=p*2.03+ve
    LOOP
    ========================================================= */
       let last = performance.now();
+      let arT = 0, arN = 0;
+      function autoRes(dt) {
+        if (document.visibilityState !== "visible" || !game.started) return;
+        arT += dt; arN++;
+        if (arT < 2.5) return;
+        const fps = arN / arT; arT = 0; arN = 0;
+        let np = PR;
+        if (fps < 42 && PR > 0.75) np = Math.max(0.75, +(PR - 0.2).toFixed(2));
+        else if (fps > 57 && PR < PR_MAX) np = Math.min(PR_MAX, +(PR + 0.1).toFixed(2));
+        if (np !== PR) { PR = np; renderer.setPixelRatio(PR); renderer.setSize(innerWidth, innerHeight, false); makeRT(); post.uniforms.uPR.value = PR; }
+      }
       function frame(now) {
         const dt = clamp((now - last) / 1000, 0, 0.05);
         last = now;
         game.t += dt;
+        autoRes(dt);
         updateChunks(1);
         if (glider.on) updateGlider(dt);
         else if (game.mode === "walk") updateWalk(dt);
@@ -10845,6 +10882,7 @@ float fbm(vec2 p){float v=0.,a=.5;for(int i=0;i<5;i++){v+=a*noise(p);p=p*2.03+ve
         camera.aspect = innerWidth / innerHeight;
         camera.updateProjectionMatrix();
         makeRT();
+        post.uniforms.uPR.value = PR;
       });
       {
         const sp = findSpawn();

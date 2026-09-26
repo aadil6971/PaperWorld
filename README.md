@@ -51,7 +51,7 @@ plane, eagle and camera buttons on the right. Drag the screen to look around.
 
 **Install it as an app:** in Chrome tap **⋮ → Install app** (Safari: **Share → Add to Home Screen**).
 It opens full-screen from your home screen and works offline after the first visit.
-Phones get a lighter quality mode automatically. Add `?desktop` to the URL to force full quality.
+Phones start on **Medium** quality and sharpen or soften the resolution automatically to stay smooth. Tap **⚙ QUALITY** to switch between Low, Medium and High (your choice is remembered).
 
 ## Run locally
 
