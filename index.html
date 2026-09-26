@@ -2,7 +2,13 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover" />
+    <meta name="theme-color" content="#f4efe2" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <link rel="manifest" href="manifest.webmanifest" />
+    <link rel="icon" type="image/png" href="icons/icon-192.png" />
+    <link rel="apple-touch-icon" href="icons/icon-192.png" />
     <title>Paper World — Ink & Wash Roads</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -705,6 +711,36 @@
       #toast.show {
         opacity: 1;
       }
+      html,body{overscroll-behavior:none;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+      canvas#c{touch-action:none}
+      #touch{display:none;position:absolute;inset:0;pointer-events:none}
+      body.touch:not(.hidehud) #touch{display:block}
+      body.studio #touch{display:none!important}
+      #stick{position:absolute;left:calc(28px + env(safe-area-inset-left));bottom:28px;width:150px;height:150px;border-radius:50%;
+        background:rgba(251,248,239,.55);border:1.5px solid var(--ink);box-shadow:2px 2px 0 var(--ink);pointer-events:auto;touch-action:none}
+      #knob{position:absolute;left:50%;top:50%;width:62px;height:62px;border-radius:50%;background:var(--gold);border:1.5px solid var(--ink);
+        box-shadow:2px 2px 0 var(--ink);transform:translate(-50%,-50%)}
+      #tbtns{position:absolute;right:calc(22px + env(safe-area-inset-right));bottom:24px;display:grid;grid-template-columns:repeat(3,64px);gap:10px;pointer-events:auto}
+      .tb{width:64px;height:64px;border-radius:50%;border:1.5px solid var(--ink);background:rgba(251,248,239,.85);box-shadow:2px 2px 0 var(--ink);
+        font:700 11px 'DM Sans',sans-serif;letter-spacing:.08em;color:var(--ink);touch-action:none;display:flex;align-items:center;justify-content:center}
+      .tb.big{background:var(--red);color:#fff}
+      .tb.gold{background:var(--gold)}
+      .tb.on{transform:translate(1px,1px);box-shadow:0 0 0 var(--ink);filter:brightness(.92)}
+      .tb span{font-size:22px;letter-spacing:0}
+      #rotate{display:none;position:fixed;inset:0;z-index:9;background:var(--paper);align-items:center;justify-content:center;flex-direction:column;gap:10px;
+        font:700 12px 'DM Sans';letter-spacing:.2em;text-transform:uppercase;text-align:center;padding:30px}
+      #rotate b{font-family:'Caveat Brush',cursive;font-size:44px;letter-spacing:0;text-transform:none;font-weight:400}
+      @media (orientation:portrait){body.touch #rotate{display:flex}}
+      body.touch #radio,body.touch #songbook,body.touch #dash .right,body.touch #timebar .btn,body.touch #nav,body.touch #help{display:none!important}
+      body.touch #dash{bottom:auto;right:auto;top:10px;left:50%;transform:translateX(-50%) scale(.82);transform-origin:top center;padding:6px 10px}
+      body.touch #timebar{top:58px}
+      body.touch #brand h1{font-size:22px}
+      body.touch #minimap{width:120px;height:120px;top:12px;right:calc(14px + env(safe-area-inset-right))}
+      body.touch #tip{bottom:auto;top:78px}
+      body.touch #hint{bottom:auto;top:130px}
+      body.touch #toast{bottom:auto;top:160px}
+      body.touch #intro{transform:translate(50%,-50%) scale(.82);right:50%}
+      body.touch #intro.hide{transform:translate(50%,-50%) scale(.82) translateX(40px)}
       @media (max-width: 900px) {
         #timebar {
           flex-wrap: wrap;
@@ -905,6 +941,18 @@
       <div id="loading">folding the world…</div>
       <div id="hint" class="card"></div>
       <div id="toast" class="card"></div>
+      <div id="touch">
+        <div id="stick"><div id="knob"></div></div>
+        <div id="tbtns">
+          <button class="tb" data-act="c"><span>🎥</span></button>
+          <button class="tb" data-act="f"><span>✈</span></button>
+          <button class="tb" data-act="g"><span>🦅</span></button>
+          <button class="tb gold" data-act="e">GET<br>IN/OUT</button>
+          <button class="tb" data-k="shift">BOOST</button>
+          <button class="tb big" data-k=" ">HOP</button>
+        </div>
+      </div>
+      <div id="rotate"><b>Turn your phone sideways</b>Paper World plays in landscape</div>
       <div id="flash"></div>
     </div>
 
@@ -942,17 +990,21 @@
       /* =========================================================
    renderer / scene
    ========================================================= */
+      const QS = location.search;
+      const IS_TOUCH = /[?&]touch/.test(QS) || (matchMedia("(pointer: coarse)").matches && !/[?&]desktop/.test(QS));
+      const MOBILE = /[?&]mobile/.test(QS) || (IS_TOUCH && Math.min(screen.width, screen.height) < 820 && !/[?&]desktop/.test(QS));
+      const FOG_N = MOBILE ? 280 : 450, FOG_F = MOBILE ? 900 : 1500;
       const canvas = $("c");
       const renderer = new THREE.WebGLRenderer({
         canvas,
         antialias: false,
         powerPreference: "high-performance",
       });
-      let PR = Math.min(devicePixelRatio, 1.75);
+      let PR = Math.min(devicePixelRatio, MOBILE ? 1 : 1.75);
       renderer.setPixelRatio(PR);
       renderer.setSize(innerWidth, innerHeight, false);
       renderer.shadowMap.enabled = true;
-      renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+      renderer.shadowMap.type = MOBILE ? THREE.PCFShadowMap : THREE.PCFSoftShadowMap;
       const scene = new THREE.Scene();
       const camera = new THREE.PerspectiveCamera(
         62,
@@ -960,7 +1012,7 @@
         0.3,
         6000,
       );
-      scene.fog = new THREE.Fog(0xeef3f5, 450, 1500);
+      scene.fog = new THREE.Fog(0xeef3f5, FOG_N, FOG_F);
 
       const INK = new THREE.Color("#1f1d2b");
       const grad = new THREE.DataTexture(
@@ -980,8 +1032,8 @@
           uThick: { value: 0.075 },
           uInk: { value: INK.clone() },
           uFog: { value: new THREE.Color() },
-          uFogNear: { value: 450 },
-          uFogFar: { value: 1500 },
+          uFogNear: { value: FOG_N },
+          uFogFar: { value: FOG_F },
         },
         vertexShader: `
     attribute vec3 onormal;
@@ -1056,7 +1108,7 @@
       const CH = 384,
         CELLS = 80,
         CS = CH / CELLS,
-        VIEW_R = 3,
+        VIEW_R = MOBILE ? 2 : 3,
         HALF = 11,
         SH = 3.4,
         WATER_Y = -3,
@@ -1434,8 +1486,8 @@ float fbm(vec2 p){float v=0.,a=.5;for(int i=0;i<5;i++){v+=a*noise(p);p=p*2.03+ve
           uShallow: { value: new THREE.Color("#9fe6ea") },
           uFoam: { value: new THREE.Color("#ffffff") },
           uFog: { value: new THREE.Color() },
-          uFogNear: { value: 450 },
-          uFogFar: { value: 1500 },
+          uFogNear: { value: FOG_N },
+          uFogFar: { value: FOG_F },
           uDark: { value: 0 },
         },
         vertexShader: `varying vec3 vW;void main(){vec4 w=modelMatrix*vec4(position,1.);vW=w.xyz;gl_Position=projectionMatrix*viewMatrix*w;}`,
@@ -4393,7 +4445,7 @@ float fbm(vec2 p){float v=0.,a=.5;for(int i=0;i<5;i++){v+=a*noise(p);p=p*2.03+ve
       }
       function meadow(x, h, z, r) {
         const drift = pick(FLOWER_COLS);
-        for (let k = 0, n = 9 + Math.floor(r * 10); k < n; k++) {
+        for (let k = 0, n = Math.round((9 + Math.floor(r * 10)) * (MOBILE ? 0.45 : 1)); k < n; k++) {
           const fx = x + RR(-4.5, 4.5),
             fz = z + RR(-4.5, 4.5);
           if (roadNear(fx, fz).d < HALF + SH + 1) continue;
@@ -5972,7 +6024,7 @@ float fbm(vec2 p){float v=0.,a=.5;for(int i=0;i<5;i++){v+=a*noise(p);p=p*2.03+ve
    ========================================================= */
       const sun = new THREE.DirectionalLight(0xffffff, 2.6);
       sun.castShadow = true;
-      sun.shadow.mapSize.set(2048, 2048);
+      sun.shadow.mapSize.set(MOBILE ? 1024 : 2048, MOBILE ? 1024 : 2048);
       Object.assign(sun.shadow.camera, {
         left: -55,
         right: 55,
@@ -7111,7 +7163,7 @@ float fbm(vec2 p){float v=0.,a=.5;for(int i=0;i<5;i++){v+=a*noise(p);p=p*2.03+ve
         const dt = new THREE.DepthTexture(w, h, THREE.UnsignedInt248Type);
         dt.format = THREE.DepthStencilFormat;
         rt = new THREE.WebGLRenderTarget(w, h, {
-          samples: 4,
+          samples: MOBILE ? 0 : 4,
           type: THREE.HalfFloatType,
           stencilBuffer: true,
           depthTexture: dt,
@@ -7309,6 +7361,57 @@ float fbm(vec2 p){float v=0.,a=.5;for(int i=0;i<5;i++){v+=a*noise(p);p=p*2.03+ve
         lastY = e.clientY;
       });
       canvas.addEventListener("pointerup", () => (game.dragging = false));
+      canvas.addEventListener("pointercancel", () => (game.dragging = false));
+
+      /* touch: joystick + action buttons (phones / tablets) */
+      if (IS_TOUCH) {
+        document.body.classList.add("touch");
+        const kt = document.querySelector("#intro .keys");
+        if (kt) kt.innerHTML = "<b>Left stick</b> drive / walk / fly · <b>HOP</b> jump or flap · <b>BOOST</b> hold for speed · <b>GET IN/OUT</b> walk or take any vehicle · <b>✈ 🦅</b> fly · <b>🎥</b> camera · drag the screen to look";
+        const stick = $("stick"), knob = $("knob");
+        let sid = null, cx0 = 0, cy0 = 0;
+        const moveStick = (e) => {
+          const R = 55;
+          let dx = e.clientX - cx0, dy = e.clientY - cy0;
+          const l = Math.hypot(dx, dy);
+          if (l > R) { dx *= R / l; dy *= R / l; }
+          knob.style.transform = `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px))`;
+          const nx = dx / R, ny = dy / R;
+          keys.w = ny < -0.25; keys.s = ny > 0.35; keys.a = nx < -0.3; keys.d = nx > 0.3;
+        };
+        const endStick = (e) => {
+          if (e.pointerId !== sid) return;
+          sid = null;
+          knob.style.transform = "translate(-50%,-50%)";
+          keys.w = keys.s = keys.a = keys.d = false;
+        };
+        stick.addEventListener("pointerdown", (e) => {
+          sid = e.pointerId;
+          try { stick.setPointerCapture(e.pointerId); } catch (_) {}
+          const r = stick.getBoundingClientRect();
+          cx0 = r.left + r.width / 2; cy0 = r.top + r.height / 2;
+          moveStick(e); e.preventDefault();
+        });
+        stick.addEventListener("pointermove", (e) => { if (e.pointerId === sid) moveStick(e); });
+        stick.addEventListener("pointerup", endStick);
+        stick.addEventListener("pointercancel", endStick);
+        for (const b of document.querySelectorAll("#tbtns .tb")) {
+          const k = b.dataset.k, act = b.dataset.act;
+          b.addEventListener("pointerdown", (e) => {
+            e.preventDefault(); try { b.setPointerCapture(e.pointerId); } catch (_) {} b.classList.add("on");
+            if (navigator.vibrate) navigator.vibrate(8);
+            if (k !== undefined) { keys[k] = true; if (k === " ") hopQueued = true; }
+            if (act === "e") interact();
+            if (act === "f") toggleFly("plane");
+            if (act === "g") toggleFly("eagle");
+            if (act === "c") cycleCam();
+          });
+          const up = () => { b.classList.remove("on"); if (k !== undefined) keys[k] = false; };
+          b.addEventListener("pointerup", up);
+          b.addEventListener("pointercancel", up);
+          b.addEventListener("contextmenu", (e) => e.preventDefault());
+        }
+      }
 
       /* =========================================================
    UI wiring
@@ -7560,6 +7663,12 @@ float fbm(vec2 p){float v=0.,a=.5;for(int i=0;i<5;i++){v+=a*noise(p);p=p*2.03+ve
         return { x: centerOf(f, 0, 0), z: 0, heading: 0 };
       }
       function start() {
+        if (IS_TOUCH) {
+          try {
+            const el = document.documentElement, rq = el.requestFullscreen || el.webkitRequestFullscreen;
+            if (rq) Promise.resolve(rq.call(el)).then(() => screen.orientation && screen.orientation.lock && screen.orientation.lock("landscape").catch(() => {})).catch(() => {});
+          } catch (e) {}
+        }
         if (game.started) return;
         game.started = true;
         audioInit();
@@ -8028,6 +8137,7 @@ float fbm(vec2 p){float v=0.,a=.5;for(int i=0;i<5;i++){v+=a*noise(p);p=p*2.03+ve
         ["tractor", 40],
         ["sports", 70],
       ];
+      if (MOBILE) for (const v of VCOUNTS) v[1] = Math.max(3, Math.round(v[1] * 0.2));
       const VEH_COLS = [
         "#e0418f",
         "#1fb5a8",
@@ -8293,7 +8403,7 @@ float fbm(vec2 p){float v=0.,a=.5;for(int i=0;i<5;i++){v+=a*noise(p);p=p*2.03+ve
           "#b8412c",
           "#d8d2c8",
         ];
-      const people = new Crowd(PSPEC, [["person", 320]], true);
+      const people = new Crowd(PSPEC, [["person", MOBILE ? 80 : 320]], true);
       function placePed(a, near, at) {
         a.col = rpick(SHIRTS);
         a.pants = rpick(PANTS);
@@ -8649,7 +8759,7 @@ float fbm(vec2 p){float v=0.,a=.5;for(int i=0;i<5;i++){v+=a*noise(p);p=p*2.03+ve
         16,
       );
       const balloons = [];
-      for (let k = 0; k < 26; k++) {
+      for (let k = 0; k < (MOBILE ? 10 : 26); k++) {
         const g = new THREE.Group(),
           zep = k < 4;
         if (zep) {
@@ -9166,8 +9276,8 @@ float fbm(vec2 p){float v=0.,a=.5;for(int i=0;i<5;i++){v+=a*noise(p);p=p*2.03+ve
                 (c.cx + 0.5) * CH - car.x,
                 (c.cz + 0.5) * CH - car.z,
               ),
-              near = d < 750,
-              mid = d < 1100;
+              near = d < (MOBILE ? 420 : 750),
+              mid = d < (MOBILE ? 650 : 1100);
             if (c.lodN === near && c.lodM === mid) continue;
             c.lodN = near;
             c.lodM = mid;
@@ -9451,6 +9561,7 @@ float fbm(vec2 p){float v=0.,a=.5;for(int i=0;i<5;i++){v+=a*noise(p);p=p*2.03+ve
         ["bear", 10],
         ["swan", 24],
       ];
+      if (MOBILE) for (const v of ACOUNTS) v[1] = Math.max(2, Math.round(v[1] * 0.4));
       const animals = new Crowd(ASPEC, ACOUNTS, true);
       function habitat(x, z) {
         const h = heightAt(x, z);
@@ -9575,7 +9686,7 @@ float fbm(vec2 p){float v=0.,a=.5;for(int i=0;i<5;i++){v+=a*noise(p);p=p*2.03+ve
         s.bezierCurveTo(1.3, -0.3, 0.8, -0.9, 0, -0.2);
         return new THREE.ShapeGeometry(s, 6).rotateX(-Math.PI / 2);
       })();
-      const BN2 = 170,
+      const BN2 = MOBILE ? 60 : 170,
         wingMat = toon(0xffffff, { side: THREE.DoubleSide }),
         wingR = new THREE.InstancedMesh(wingGeo, wingMat, BN2),
         wingL = new THREE.InstancedMesh(wingGeo, wingMat, BN2);
@@ -9699,7 +9810,7 @@ float fbm(vec2 p){float v=0.,a=.5;for(int i=0;i<5;i++){v+=a*noise(p);p=p*2.03+ve
           );
       };
       const TG = 2.3,
-        TR = 30,
+        TR = MOBILE ? 16 : 30,
         TN = (2 * TR + 1) * (2 * TR + 1),
         tufts = new THREE.InstancedMesh(tuftGeo, tuftMat, TN);
       tufts.frustumCulled = false;
@@ -9812,7 +9923,7 @@ float fbm(vec2 p){float v=0.,a=.5;for(int i=0;i<5;i++){v+=a*noise(p);p=p*2.03+ve
         scene.add(g);
         whales.push({ g, tail, need: true, ph: Math.random() * 6, hd: 0 });
       }
-      const FFN = 260,
+      const FFN = MOBILE ? 100 : 260,
         ffGeo = new THREE.BufferGeometry(),
         ffPos = new Float32Array(FFN * 3),
         ffs = [];
@@ -10775,6 +10886,7 @@ float fbm(vec2 p){float v=0.,a=.5;for(int i=0;i<5;i++){v+=a*noise(p);p=p*2.03+ve
         },
       };
       requestAnimationFrame(frame);
+      if ("serviceWorker" in navigator && location.protocol !== "file:") navigator.serviceWorker.register("sw.js").catch(() => {});
     </script>
   </body>
 </html>

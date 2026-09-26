@@ -43,6 +43,16 @@ as sheet music.
 | H | Hide UI |
 | Drag | Look around |
 
+## Play on your phone
+
+Open the play link on Android (Chrome) or iPhone (Safari) and turn the phone sideways.
+Touch controls appear automatically: a joystick on the left, and **HOP**, **BOOST**, **GET IN/OUT**,
+plane, eagle and camera buttons on the right. Drag the screen to look around.
+
+**Install it as an app:** in Chrome tap **⋮ → Install app** (Safari: **Share → Add to Home Screen**).
+It opens full-screen from your home screen and works offline after the first visit.
+Phones get a lighter quality mode automatically. Add `?desktop` to the URL to force full quality.
+
 ## Run locally
 
 No build step. Serve the folder with any static server:
