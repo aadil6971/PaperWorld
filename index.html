@@ -10387,7 +10387,7 @@ float fbm(vec2 p){float v=0.,a=.5;for(int i=0;i<5;i++){v+=a*noise(p);p=p*2.03+ve
             angDiff(glider.heading + game.dragYaw, game.camYaw) *
             (1 - Math.exp(-3.5 * dt));
           const pz = glider.pitch * 0.6,
-            D = (glider.kind === "eagle" ? 7.5 : 9) * z;
+            D = (glider.kind === "eagle" ? 7.5 : 9) * z * (IS_TOUCH ? 0.8 : 1);
           camPos.set(
             glider.pos.x + Math.sin(game.camYaw) * D * Math.cos(pz),
             glider.pos.y +
@@ -10418,7 +10418,7 @@ float fbm(vec2 p){float v=0.,a=.5;for(int i=0;i<5;i++){v+=a*noise(p);p=p*2.03+ve
           camera.lookAt(lookAt);
           camera.fov = damp(
             camera.fov,
-            game.fov + 8 + (game.boost || 0) * 12,
+            fitFov(game.fov + (IS_TOUCH ? 3 : 8) + (game.boost || 0) * (IS_TOUCH ? 7 : 12)),
             4,
             dt,
           );
@@ -10468,7 +10468,7 @@ float fbm(vec2 p){float v=0.,a=.5;for(int i=0;i<5;i++){v+=a*noise(p);p=p*2.03+ve
             .addScaledVector(_r.set(-F.z, 0, F.x), 3.2)
             .addScaledVector(YUP, 0.6);
         camera.lookAt(lookAt);
-        const tf = game.fov + (game.boost || 0) * 12;
+        const tf = fitFov(game.fov + (game.boost || 0) * (IS_TOUCH ? 7 : 12));
         camera.fov = damp(camera.fov, tf, 4, dt);
         camera.updateProjectionMatrix();
       }
@@ -10813,6 +10813,12 @@ float fbm(vec2 p){float v=0.,a=.5;for(int i=0;i<5;i++){v+=a*noise(p);p=p*2.03+ve
    LOOP
    ========================================================= */
       let last = performance.now();
+      function fitFov(v) {
+        const a = camera.aspect, ref = 1.6;
+        if (a <= ref) return v;
+        const h = 2 * Math.atan(Math.tan((v * Math.PI) / 360) * ref);
+        return (2 * Math.atan(Math.tan(h / 2) / a) * 180) / Math.PI;
+      }
       let arT = 0, arN = 0;
       function autoRes(dt) {
         if (document.visibilityState !== "visible" || !game.started) return;
