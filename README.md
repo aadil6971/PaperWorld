@@ -1,4 +1,4 @@
-# Foldline
+# Paper World
 
 **Paint the road. Then leave it.**
 
